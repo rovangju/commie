@@ -61,7 +61,7 @@ class CSVColMapper {
             return $this->labels[$label]; /* return the index */
         }
 
-        if (in_array($label, $this->indexes)) {
+        if (in_array($label, $this->indexes, TRUE)) {
             return $label;
         }
 
