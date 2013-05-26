@@ -105,5 +105,18 @@ class CSVRow {
         }
         return FALSE;
     }
+
+    /**
+     * Retrieve the raw array data from the CSV row
+     * 
+     * @return array
+     */
+    public function raw() {
+    
+        return array_combine(
+            $this->mapper->labels(),
+            $this->rowData
+        );
+    }
 }
 ?>

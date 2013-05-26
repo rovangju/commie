@@ -103,5 +103,16 @@ class CSVColMapper {
     public function factory(&$val) {
         return new CSVCol($val);
     }
+
+    /**
+     * Get the labels specified (if any) from the header row
+     * 
+     * @return array
+     */
+    public function labels() {
+        if ($this->labels) {
+            return array_keys($this->labels);
+        }
+    }
 }
 ?>
