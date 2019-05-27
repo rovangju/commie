@@ -17,9 +17,10 @@
     },
 
     "autoload": {
-        "psr-0": {"Commie": "/" }
+        "psr-0": {"Commie": "src/" }
     },
     "require-dev": {
-        "phpunit/phpunit": "^8.1"
+        "phpunit/phpunit": "~5",
+        "apigen/apigen": "^4.1"
     }
 }
