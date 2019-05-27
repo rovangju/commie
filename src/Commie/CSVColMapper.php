@@ -2,8 +2,6 @@
 
 namespace Commie;
 
-use \RuntimeException;
-
 class CSVColMapper {
 
     protected $indexes = array();
@@ -25,8 +23,8 @@ class CSVColMapper {
      * NOTE: If you have two colums under the same heading, e.g.: 'ColZed, ColZed, ColZed, ...'; they will be indexed 
      * uniquely for label referencing as 'MyCol, MyCol2, Mycol3, ...'
      * 
-     * @param array  $colHeader Data First row of data to allow parsing of column headings (if any) and indexes
-     * @param string $hasHeader TRUE if the file will have a HEADER row and should map them by label.
+     * @param array  $colHeaderData Data First row of data to allow parsing of column headings (if any) and indexes
+     * @param boolean $hasHeader TRUE if the file will have a HEADER row and should map them by label.
      * 
      * @return NULL
      */
@@ -41,6 +39,7 @@ class CSVColMapper {
                 $this->mapLabel($label, $key);
             }
         }
+        return;
     }
 
     /**
@@ -91,6 +90,8 @@ class CSVColMapper {
         }
 
         $this->labels[$label] = $mapping;
+
+        return;
     }
     
     /**
@@ -104,4 +105,3 @@ class CSVColMapper {
         return new CSVCol($val);
     }
 }
-?>

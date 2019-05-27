@@ -43,6 +43,8 @@ class CSVCol {
          if (self::$TRIM_ALL) {
              $this->value = trim($val);
          }
+
+         return;
      }
 
      /**
@@ -66,9 +68,7 @@ class CSVCol {
          if (!is_scalar($val)) {
              throw new UnexpectedValueException("The value provided was non-scalar");
          }
-          
          $this->value = $val;
+         return;
      }
  }
-
- ?>

@@ -18,18 +18,18 @@ another, and don't lend themselves well to customization for the wild formats de
 <?php
 
 require_once 'Commie/_config.php';
-/* ^-- Not needed if you use a PSR-0 autoloader, just register it normally /*
+/* ^-- Not needed if you use a PSR-0 autoloader, just register it normally */
+
+use Commie\CSVFile;
 
 $file = new SplFileObject('./file.csv');
 $csv = new CSVFile($file, TRUE);
 
-while (($row = $csv->read()) {
-    echo $row->col('My Heading');
+while (($row = $csv->read())) {
+    echo $row->col('My Heading')->value();
 }
 
-echo $csv->row(10)->col('TOTAL');
-
-?>
+echo $csv->row(10)->col('TOTAL')->value();
 
 ```
 
