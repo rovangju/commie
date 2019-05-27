@@ -2,3 +2,7 @@ docs/
 .settings
 .project
 .buildpath
+.idea
+*.iml
+vendor/
+composer.lock

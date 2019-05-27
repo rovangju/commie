@@ -106,4 +106,3 @@ class CSVRow {
         return FALSE;
     }
 }
-?>

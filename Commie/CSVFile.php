@@ -76,6 +76,7 @@ class CSVFile {
      */
     public function setMapper(CSVColMapper $mapper) {
         $this->mapper = $mapper;
+        return;
     }
 
     /**
@@ -103,16 +104,15 @@ class CSVFile {
     public function setDelimiter($delim) {
 
         if (!($this->file instanceof SplFileObject)) {
-            throw new RuntimeException('Delmiter must be set after initializing an instance');
+            throw new RuntimeException('Delmiter must be set after initializing a CSVFile');
         }
 
         if (strlen($delim) > 1) {
             throw new InvalidArgumentException("Delimiter must be a single character");
         }
 
-        $this->file->setCsvControl($delimiter);
-        $this->delimiter = $delimiter;
-
+        $this->file->setCsvControl($delim);
+        $this->delimiter = $delim;
     }
     
     /**
@@ -235,9 +235,9 @@ class CSVFile {
      */
     public function reset() {
         $this->file()->rewind();
+        return;
     }
 
-    
     /**
      * Read the current row of a CSV file, move the internal pointer forward and return CSVRow object. 
      * if the file is EOF this method returns FALSE in order to support usage in a while loop.
@@ -280,5 +280,3 @@ class CSVFile {
         return $rval;
     }
 }
-
-?>
