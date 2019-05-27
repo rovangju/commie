@@ -18,10 +18,9 @@ another, and don't lend themselves well to customization for the wild formats de
 <?php
 
 require_once 'Commie/_config.php';
+/* ^-- Not needed if you use a PSR-0 autoloader, just register it normally */
 
 use Commie\CSVFile;
-
-/* ^-- Not needed if you use a PSR-0 autoloader, just register it normally */
 
 $file = new SplFileObject('./file.csv');
 $csv = new CSVFile($file, TRUE);
