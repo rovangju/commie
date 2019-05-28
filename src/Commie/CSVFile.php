@@ -62,7 +62,7 @@ class CSVFile {
 
         $this->file =& $file;
 
-        $file->setFlags(SplFileObject::READ_CSV);
+        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
 
         $this->headersPresent = (bool)$headersPresent;
     }
@@ -256,7 +256,7 @@ class CSVFile {
      */
     public function read() {
 
-        if ($this->file()->eof() && $this->lastRow == $this->file()->key()) {
+        if ($this->file()->eof()) {
             return FALSE;
         }
 
