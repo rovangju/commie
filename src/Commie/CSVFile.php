@@ -1,196 +1,194 @@
 <?php
+/**
+ * Commie: CSV Traversal Library
+ * @license BSD-3-Clause
+ * @author Justin Rovang <generate@itnobody.com>
+ */
 
 namespace Commie;
 
-use \Exception;
-use \InvalidArgumentException;
-use \RuntimeException;
-
-use \SplFileObject;
+use InvalidArgumentException;
+use SplFileObject;
 
 /**
- * The CSVFile object is intended to be a mere OO wrapper built around an SplFileObject. 
- * It provides an iteratable implementation for the file while providing an interface for dealing with the 
+ * The CSVFile object is intended to be a mere OO wrapper built around an SplFileObject.
+ * It provides an iterable implementation for the file while providing an interface for dealing with the
  * corresponding rows and columns of a CSV file.
- * 
+ *
  * <b>Basic use:</b>
  * <code>
  * $file = new SplFileObject('./file.csv');
  * $csv = new CSVFile($file, TRUE);
- * 
- * while (($row = $csv->read()) {
- *     echo $row->col('My Heading');
+ *
+ * while (($row = $csv->read())) {
+ *     echo $row->col('My Heading')->value();
  * }
  * </code>
- * 
+ *
  * <b>Misc. use cases:</b>
- * 
+ *
  * <code>
  * $file = new SplFileObject('./file.csv');
  * $csv = new CSVFile($file, TRUE);
- * 
+ *
  * $csv->setDelimiter("|");
- * 
- * echo $csv->row(10)->col('TOTAL');
+ *
+ * echo $csv->row(10)->col('TOTAL')->value();
  * </code>
- * 
+ *
  * @package commie
  */
-
 class CSVFile {
 
     /* Defaults as per PHP.net */
-    protected $delimiter = ",";
-    protected $enclosure = '"';
-    protected $escape = "\\";
+    protected string $delimiter = ",";
+    protected string $enclosure = '"';
+    protected string $escape = "\\";
 
-    protected $headersPresent;
+    protected bool $headersPresent;
 
-    protected $lastRow = 0;
+    protected int $lastRow = 0;
+
+    protected SplFileObject $file;
+
+    protected ?CSVColMapper $mapper = null;
 
     /**
-     * @var SplFileObject
+     * Construct a CSVFile wrapper around an SplFileObject
+     *
+     * @param SplFileObject $file           File object to wrap
+     * @param bool          $headersPresent TRUE if the file carries a header row
      */
-    protected $file;
+    public function __construct(SplFileObject $file, bool $headersPresent = FALSE) {
 
-    /**
-     * @var CSVColMapper
-     */
-    protected $mapper;
+        $this->file = $file;
 
-    public function __construct(SplFileObject $file, $headersPresent = FALSE) {
+        $file->setFlags(
+            SplFileObject::READ_CSV
+            | SplFileObject::READ_AHEAD
+            | SplFileObject::SKIP_EMPTY
+            | SplFileObject::DROP_NEW_LINE
+        );
 
-        $this->file =& $file;
-
-        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
-
-        $this->headersPresent = (bool)$headersPresent;
+        $this->headersPresent = $headersPresent;
     }
 
     /**
      * Set the column object mapper to operate on rows
-     * 
+     *
      * @param CSVColMapper $mapper Corresponding mapper
-     * 
-     * @return NULL
      */
-    public function setMapper(CSVColMapper $mapper) {
+    public function setMapper(CSVColMapper $mapper): void {
         $this->mapper = $mapper;
-        return;
     }
 
     /**
      * Determine if the file has a header row present
-     * 
-     * @return boolean TRUE if a header row is present
+     *
+     * @return bool TRUE if a header row is present
      */
-    public function hasHeaders() {
+    public function hasHeaders(): bool {
         return $this->headersPresent;
     }
-    
+
     /**
      * Set the delimiter character for values. This method is a mere passthrough for SplFileObject's
      * setCsvControl() method
      *
-     * @param string $enclosure The field delimiter (one character only). 
+     * @param string $delim The field delimiter (one character only)
      *
-     * @throws Exception Thrown if the object has somehow not been initialized with an SplFileObject instance
      * @throws InvalidArgumentException Thrown if the delimiter string is longer than one character
      *
-     * @see http://us3.php.net/manual/en/splfileobject.setcsvcontrol.php
-     *
-     * @return void
+     * @see https://www.php.net/manual/en/splfileobject.setcsvcontrol.php
      */
-    public function setDelimiter($delim) {
-
-        if (!($this->file instanceof SplFileObject)) {
-            throw new RuntimeException('Delmiter must be set after initializing a CSVFile');
-        }
+    public function setDelimiter(string $delim): void {
 
         if (strlen($delim) > 1) {
             throw new InvalidArgumentException("Delimiter must be a single character");
         }
 
-        $this->file->setCsvControl($delim);
         $this->delimiter = $delim;
+        $this->applyCsvControl();
     }
-    
+
     /**
      * Set the enclosing character for values. This method is a mere passthrough for SplFileObject's
      * setCsvControl() method
      *
-     * @param string $enclosure The field enclosure character (one character only). 
+     * @param string $enclosure The field enclosure character (one character only)
      *
-     * @throws Exception Thrown if the object has somehow not been initialized with an SplFileObject instance
      * @throws InvalidArgumentException Thrown if the enclosure string is longer than one character
      *
-     * @see http://us3.php.net/manual/en/splfileobject.setcsvcontrol.php
-     *
-     * @return void
+     * @see https://www.php.net/manual/en/splfileobject.setcsvcontrol.php
      */
-    public function setEnclosing($enclosure) {
-
-        if (!($this->file instanceof SplFileObject)) {
-            throw new Exception('Enclosure character must be set after initializing an instance');
-        }
+    public function setEnclosing(string $enclosure): void {
 
         if (strlen($enclosure) > 1) {
             throw new InvalidArgumentException("Encloser must be a single character");
         }
 
-        $this->file->setCsvControl($this->delimiter, $enclosure);
         $this->enclosure = $enclosure;
+        $this->applyCsvControl();
     }
 
     /**
-     * Set the escape character for values. This method is a mere passthrough for SplFileObject's 
+     * Set the escape character for values. This method is a mere passthrough for SplFileObject's
      * setCsvControl() method
-     * 
+     *
+     * NOTE: PHP 8.4 deprecates explicitly supplying the escape parameter to the CSV functions;
+     * on 8.4+ the requested escape character is recorded but not pushed to the file control.
+     *
      * @param string $escape The field escape character (one character only)
-     * 
-     * @throws Exception Thrown if the object has somehow not been initialized with an SplFileObject instance
+     *
      * @throws InvalidArgumentException Thrown if the escape string is longer than one character
-     * 
-     * @see http://us3.php.net/manual/en/splfileobject.setcsvcontrol.php
-     * 
-     * @return void
+     *
+     * @see https://www.php.net/manual/en/splfileobject.setcsvcontrol.php
      */
-    public function setEscape($escape) {
-
-        if (!($this->file instanceof SplFileObject)) {
-            throw new Exception('Escape character must be set after initializing an instance');
-        }
+    public function setEscape(string $escape): void {
 
         if (strlen($escape) > 1) {
             throw new InvalidArgumentException("Escape character must be a single character");
         }
 
-        $this->file->setCsvControl($this->delimiter, $this->enclosure, $escape);
         $this->escape = $escape;
+        $this->applyCsvControl();
     }
 
     /**
-     * Retrieve the underling file object
-     * 
+     * Push the current delimiter/enclosure/escape onto the underlying file object.
+     *
+     * PHP 8.4 deprecates relying on the default escape argument and deprecates non-empty
+     * escape values; on 8.4+ the new default (empty string) is applied to the file.
+     */
+    protected function applyCsvControl(): void {
+
+        $escape = PHP_VERSION_ID >= 80400 ? '' : $this->escape;
+
+        $this->file->setCsvControl($this->delimiter, $this->enclosure, $escape);
+    }
+
+    /**
+     * Retrieve the underlying file object
+     *
      * @return SplFileObject
      */
-    public function file() {
+    public function file(): SplFileObject {
         return $this->file;
     }
 
-    protected function getMapper() {
+    protected function getMapper(): CSVColMapper {
 
         if (!$this->mapper) {
-            	
-            $curIdx = $this->file()->key();
-            	
-            $this->file()->seek(0);
+
+            $curIdx = $this->file->key();
+
+            $this->file->seek(0);
 
             $this->setMapper(
-                new CSVColMapper($this->file()->current(), $this->hasHeaders())
+                new CSVColMapper($this->file->current() ?: [], $this->hasHeaders())
             );
-            	
-            $this->file()->seek($curIdx);
+
+            $this->file->seek($curIdx);
         }
 
         return $this->mapper;
@@ -200,81 +198,71 @@ class CSVFile {
      * Cherry pick a specific row at the given zero-based row index. This method will set the internal pointer
      * to the specified index, and return it to the original value. If the index is higher than the number
      * of rows in the file, the last row is returned
-     * 
-     * @param integer $idx Row offset
-     * 
-     * @throws InvalidArgumentException Thrown if the index isn't an integer
-     * 
-     * @return \Commie\CSVRow
+     *
+     * @param int $idx Row offset
+     *
+     * @return CSVRow
      */
-    public function row($idx) {
+    public function row(int $idx): CSVRow {
 
-        if (!is_int($idx)) {
-            throw new InvalidArgumentException("Row index must be an integer");
-        }
+        $this->lastRow = $this->file->key();
 
-        $this->lastRow = $this->file()->key();
-
-        $this->file()->seek($idx);
+        $this->file->seek($idx);
 
         $rval = new CSVRow(
             $this->getMapper(),
             $idx,
-            $this->file->current()
+            $this->file->current() ?: []
         );
 
-        $this->file()->seek($this->lastRow);
+        $this->file->seek($this->lastRow);
 
         return $rval;
     }
 
     /**
      * Reset the internal file pointer
-     * 
-     * @return NULL
      */
-    public function reset() {
-        $this->file()->rewind();
-        return;
+    public function reset(): void {
+        $this->file->rewind();
     }
 
     /**
-     * Read the current row of a CSV file, move the internal pointer forward and return CSVRow object. 
-     * if the file is EOF this method returns FALSE in order to support usage in a while loop.
-     * 
+     * Read the current row of a CSV file, move the internal pointer forward and return CSVRow object.
+     * If the file is EOF this method returns FALSE in order to support usage in a while loop.
+     *
      * <code>
      * $file = new SplFileObject('./file.csv');
-     * 
-     * $csv = new CSVFile($file, TRUE); 
-     * 
-     * while (($row = $csv->read()) == TRUE) {
-     *     echo $row->col(0);
+     *
+     * $csv = new CSVFile($file, TRUE);
+     *
+     * while (($row = $csv->read())) {
+     *     echo $row->col(0)->value();
      * }
-     * </code> 
-     * 
-     * @return false|\Commie\CSVRow
+     * </code>
+     *
+     * @return CSVRow|false
      */
-    public function read() {
+    public function read(): CSVRow|false {
 
-        if ($this->file()->eof()) {
+        if ($this->file->eof()) {
             return FALSE;
         }
 
-
-        if ($this->file()->key() == 0 && $this->hasHeaders()) {
-            $this->file()->seek(1);
+        if ($this->file->key() === 0 && $this->hasHeaders()) {
+            $this->file->seek(1);
         }
 
         $rval = new CSVRow(
             $this->getMapper(),
-            $this->file()->key(),
-            $this->file->current()
+            $this->file->key(),
+            $this->file->current() ?: []
         );
 
-        $this->lastRow = $this->file()->key();
+        $this->lastRow = $this->file->key();
 
-        if (!$this->file()->eof()) {
-            $this->file()->next();
+        if (!$this->file->eof()) {
+            $this->file->next();
         }
 
         return $rval;

@@ -1,4 +1,9 @@
 <?php
+/**
+ * Commie: CSV Traversal Library
+ * @license BSD-3-Clause
+ * @author Justin Rovang <generate@itnobody.com>
+ */
 
 namespace Commie;
 
@@ -10,7 +15,6 @@ use OutOfRangeException;
  *
  * @package Commie
  */
-
 class CSVRow {
 
     /**
@@ -18,28 +22,25 @@ class CSVRow {
      *
      * @var array
      */
-    public $rowData = array();
+    public array $rowData = array();
 
     /**
      * Indicator for the row offset in the CSV file
      *
-     * @var integer
-    */
-    protected $rowIdx;
-
-    /**
-     * @var CSVColMapper
+     * @var int
      */
-    public $mapper;
+    protected int $rowIdx;
+
+    public CSVColMapper $mapper;
 
     /**
      * Construct a CSVRow object
      *
-     * @param CSVColMapper $mapper  Column mapper
-     * @param integer      $idx     Row offset
-     * @param array        $rowData
+     * @param CSVColMapper $mapper Column mapper
+     * @param int          $idx    Row offset
+     * @param array        $rowData Row values
      */
-    public function __construct(CSVColMapper $mapper, $idx, array $rowData) {
+    public function __construct(CSVColMapper $mapper, int $idx, array $rowData) {
 
         $this->rowIdx = $idx;
         $this->rowData = $rowData;
@@ -50,9 +51,9 @@ class CSVRow {
     /**
      * Determine the row offset of the CSV file
      *
-     * @return integer zero-based line delimited offset of CSV file
+     * @return int Zero-based line delimited offset of CSV file
      */
-    public function offset() {
+    public function offset(): int {
         return $this->rowIdx;
     }
 
@@ -60,49 +61,43 @@ class CSVRow {
      * Determine if the row is empty or void of any values. This is handy for scenarios of CSV files that may have
      * additional lines for no reason
      *
-     * @return boolean TRUE if it's empty, FALSE if values are present
+     * @return bool TRUE if it's empty, FALSE if values are present
      */
-    public function isEmpty() {
+    public function isEmpty(): bool {
         return empty($this->rowData);
     }
 
     /**
-     * Retreive a column object for the given key - if the column could not be resolved by the provided
+     * Retrieve a column object for the given key - if the column could not be resolved by the provided
      * key an exception is thrown
      *
-     * @param string|integer $key Offset or label to reference the column by and retrieve data
+     * @param string|int $key Offset or label to reference the column by and retrieve data
      *
      * @throws OutOfRangeException Thrown when the column key could not be resolved for the row
      *
-     * @return \Commie\CSVCol
+     * @return CSVCol
      */
-    public function col($key) {
+    public function col(string|int $key): CSVCol {
 
         if (!$this->isCol($key)) {
             throw new OutOfRangeException("Column key: ".$key." - could not be resolved.");
         }
-        
+
         return $this->mapper->factory(
-            $this->rowData[
-                $this->mapper->resolve($key)
-            ]
+            $this->rowData[$this->mapper->resolve($key)]
         );
     }
 
     /**
      * Determine if a column (index or by label) exists in the CSV file.
-     * Using this before using col() is superfluous as col() implicitely calls isCol()
+     * Using this before using col() is superfluous as col() implicitly calls isCol()
      * and throws an exception on FALSE return of this method.
      *
-     * @param string|integer $reference The label or index to determine exists
+     * @param string|int $key The label or index to determine exists
      *
-     * @return boolean TRUE if the column exists
+     * @return bool TRUE if the column exists
      */
-    public function isCol($key) {
-
-        if ($this->mapper->resolve($key) !== NULL) {
-            return TRUE;
-        }
-        return FALSE;
+    public function isCol(string|int $key): bool {
+        return $this->mapper->resolve($key) !== NULL;
     }
 }
